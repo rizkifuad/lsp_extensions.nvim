@@ -4,7 +4,7 @@ nvim_lsp.dartls.setup{
   init_options = {
     closingLabels = true,
   },
-  callbacks = {
+  handlers = {
     -- get_callback can be called with or without arguments
     ['dart/textDocument/publishClosingLabels'] = require('lsp_extensions.dart.closing_labels').get_callback({highlight = "Special", prefix = " >> "}),
   },

@@ -25,7 +25,7 @@ nvim_lsp.dartls.setup{
   init_options = {
     outline = true,
   },
-  callbacks = {
+  handlers = {
     ['dart/textDocument/publishOutline'] = require('lsp_extensions.dart.outline').get_callback(),
   },
 }
@@ -38,6 +38,8 @@ Then from nvim you can call loclist() or custom() to show the outline.
 
 --]]
 
+local util = require('lsp_extensions.util')
+
 local M = {}
 
 -- The most recent published outline.
@@ -45,33 +47,33 @@ local current_outline = {}
 
 -- https://github.com/dart-lang/sdk/blob/93313eb2449099e20ade80d4760f76a325a4e176/pkg/analysis_server/tool/spec/generated/java/types/ElementKind.java#L16
 local default_kind_prefixes = {
-    CLASS = "CLASS",
-    CLASS_TYPE_ALIAS = "CLASS_TYPE_ALIAS",
-    COMPILATION_UNIT = "COMPILATION_UNIT",
-    CONSTRUCTOR = "CONSTRUCTOR",
-    CONSTRUCTOR_INVOCATION = "CONSTRUCTOR_INVOCATION",
-    ENUM = "ENUM",
-    ENUM_CONSTANT = "ENUM_CONSTANT",
-    EXTENSION = "EXTENSION",
-    FIELD = "FIELD",
-    FILE = "FILE",
-    FUNCTION = "FUNCTION",
-    FUNCTION_INVOCATION = "FUNCTION_INVOCATION",
-    FUNCTION_TYPE_ALIAS = "FUNCTION_TYPE_ALIAS",
-    GETTER = "GETTER",
-    LABEL = "LABEL",
-    LIBRARY = "LIBRARY",
-    LOCAL_VARIABLE = "LOCAL_VARIABLE",
-    METHOD = "METHOD",
-    MIXIN = "MIXIN",
-    PARAMETER = "PARAMETER",
-    PREFIX = "PREFIX",
-    SETTER = "SETTER",
-    TOP_LEVEL_VARIABLE = "TOP_LEVEL_VARIABLE",
-    TYPE_PARAMETER = "TYPE_PARAMETER",
-    UNIT_TEST_GROUP = "UNIT_TEST_GROUP",
-    UNIT_TEST_TEST = "UNIT_TEST_TEST",
-    UNKNOWN = "UNKNOWN",
+  CLASS = "CLASS",
+  CLASS_TYPE_ALIAS = "CLASS_TYPE_ALIAS",
+  COMPILATION_UNIT = "COMPILATION_UNIT",
+  CONSTRUCTOR = "CONSTRUCTOR",
+  CONSTRUCTOR_INVOCATION = "CONSTRUCTOR_INVOCATION",
+  ENUM = "ENUM",
+  ENUM_CONSTANT = "ENUM_CONSTANT",
+  EXTENSION = "EXTENSION",
+  FIELD = "FIELD",
+  FILE = "FILE",
+  FUNCTION = "FUNCTION",
+  FUNCTION_INVOCATION = "FUNCTION_INVOCATION",
+  FUNCTION_TYPE_ALIAS = "FUNCTION_TYPE_ALIAS",
+  GETTER = "GETTER",
+  LABEL = "LABEL",
+  LIBRARY = "LIBRARY",
+  LOCAL_VARIABLE = "LOCAL_VARIABLE",
+  METHOD = "METHOD",
+  MIXIN = "MIXIN",
+  PARAMETER = "PARAMETER",
+  PREFIX = "PREFIX",
+  SETTER = "SETTER",
+  TOP_LEVEL_VARIABLE = "TOP_LEVEL_VARIABLE",
+  TYPE_PARAMETER = "TYPE_PARAMETER",
+  UNIT_TEST_GROUP = "UNIT_TEST_GROUP",
+  UNIT_TEST_TEST = "UNIT_TEST_TEST",
+  UNKNOWN = "UNKNOWN",
 }
 
 -- A global function that recursively traverses the outline tree depth first
@@ -99,9 +101,9 @@ _DART_OUTLINE_APPEND_CHILDREN = function(opts, fname, items, node, tree_prefix)
   if elem.typeParameters ~= nil and elem.parameters ~= nil then
     table.insert(stringBuilder, elem.name .. elem.typeParameters .. elem.parameters)
   elseif elem.typeParameters ~= nil then
-    table.insert(stringBuilder, elem.name ..  elem.typeParameters)
+    table.insert(stringBuilder, elem.name .. elem.typeParameters)
   elseif elem.parameters ~= nil then
-    table.insert(stringBuilder, elem.name ..  elem.parameters)
+    table.insert(stringBuilder, elem.name .. elem.parameters)
   else
     table.insert(stringBuilder, elem.name)
   end
@@ -110,12 +112,12 @@ _DART_OUTLINE_APPEND_CHILDREN = function(opts, fname, items, node, tree_prefix)
   table.insert(
     items,
     {
-      filename = fname,
-      lnum = range.start.line + 1,
-      col = range.start.character + 1,
-      text = text,
-      tree_prefix = tree_prefix,
-    }
+    filename = fname,
+    lnum = range.start.line + 1,
+    col = range.start.character + 1,
+    text = text,
+    tree_prefix = tree_prefix,
+  }
   )
 
   -- We're done if there's no more children
@@ -125,7 +127,7 @@ _DART_OUTLINE_APPEND_CHILDREN = function(opts, fname, items, node, tree_prefix)
 
   local child_tree_prefix = tree_prefix .. '  '
   for _, child in ipairs(node.children) do
-      _DART_OUTLINE_APPEND_CHILDREN(opts, fname, items, child, child_tree_prefix)
+    _DART_OUTLINE_APPEND_CHILDREN(opts, fname, items, child, child_tree_prefix)
   end
 end
 
@@ -136,8 +138,8 @@ end
 -- @treturn bool a bool describing if the outline is valid
 local validate = function(outline)
   if vim.tbl_isempty(outline) then
-      print('No outline available for ' .. vim.api.nvim_buf_get_name(0))
-      return false
+    print('No outline available for ' .. vim.api.nvim_buf_get_name(0))
+    return false
   end
   return true
 end
@@ -169,7 +171,7 @@ M.custom = function(opts, handler)
   opts.kind_prefixes = vim.tbl_extend("keep", kind_prefixes, default_kind_prefixes)
   local outline = current_outline
   if not validate(outline) then
-      return
+    return
   end
   local items = build_items(opts, outline)
   handler(items)
@@ -183,10 +185,10 @@ end
 M.loclist = function(opts)
   M.custom(opts, function(items)
     vim.fn.setloclist(0, {}, ' ', {
-        title = 'Outline';
-        items = items;
-      })
-    vim.cmd[[lopen]]
+      title = 'Outline';
+      items = items;
+    })
+    vim.cmd [[lopen]]
   end)
 end
 
@@ -198,32 +200,32 @@ end
 --     This can be especially useful if you want to display unicode or patched font icons.
 --   - opts.fzf_opts is a table of strings passed to fzf. Default: {'--reverse'}
 M.fzf = function(opts)
-   M.custom(opts, function(items)
-     opts = opts or {}
-     if opts.tree == nil then
-       opts.tree = true
-     end
-     local fzf_opts = opts.fzf_opts or {'--reverse'}
-     local stringifiedItems = {}
-     for _, item in ipairs(items) do
-         table.insert(stringifiedItems, string.format('%s%s:%d:%d', (opts.tree and item.tree_prefix) or '', item.text, item.lnum, item.col))
-     end
-     -- Calling fzf as explained here:
-     -- https://github.com/junegunn/fzf/issues/1778#issuecomment-697208274
-     local fzf_run = vim.fn['fzf#run']
-     local fzf_wrap = vim.fn['fzf#wrap']
-     local wrapped = fzf_wrap('Outline', {
-         source = stringifiedItems,
-         options = fzf_opts,
-     })
-     wrapped["sink*"] = nil
-     wrapped.sink = function(line)
-       local pattern = '%S+:(%d+):(%d+)'
-       local lnum, col = string.match(line, pattern)
-       vim.call('cursor', lnum, col)
-     end
-     fzf_run(wrapped)
-   end)
+  M.custom(opts, function(items)
+    opts = opts or {}
+    if opts.tree == nil then
+      opts.tree = true
+    end
+    local fzf_opts = opts.fzf_opts or { '--reverse' }
+    local stringifiedItems = {}
+    for _, item in ipairs(items) do
+      table.insert(stringifiedItems, string.format('%s%s:%d:%d', (opts.tree and item.tree_prefix) or '', item.text, item.lnum, item.col))
+    end
+    -- Calling fzf as explained here:
+    -- https://github.com/junegunn/fzf/issues/1778#issuecomment-697208274
+    local fzf_run = vim.fn['fzf#run']
+    local fzf_wrap = vim.fn['fzf#wrap']
+    local wrapped = fzf_wrap('Outline', {
+      source = stringifiedItems,
+      options = fzf_opts,
+    })
+    wrapped["sink*"] = nil
+    wrapped.sink = function(line)
+      local pattern = '%S+:(%d+):(%d+)'
+      local lnum, col = string.match(line, pattern)
+      vim.call('cursor', lnum, col)
+    end
+    fzf_run(wrapped)
+  end)
 end
 
 -- This function displays the outline with telescope.nvim.
@@ -244,57 +246,57 @@ M.telescope = function(opts)
     if opts.tree == nil then
       opts.tree = true
     end
-    local telescope_opts = opts.telescope_opts or {hide_filename = true, ignore_filename = true, sorting_strategy = 'ascending'}
+    local telescope_opts = opts.telescope_opts or { hide_filename = true, ignore_filename = true, sorting_strategy = 'ascending' }
     local actions = require('telescope.actions')
     local finders = require('telescope.finders')
     local previewers = require('telescope.previewers')
     local sorters = require('telescope.sorters')
 
     pickers.new(telescope_opts, {
-        prompt_title = 'Outline',
-        sorting_strategy = telescope_opts.sorting_strategy,
-        finder = finders.new_table {
-          results = items,
-          entry_maker = function(entry)
-            return {
-              valid = true,
-              value = entry,
-              ordinal = entry.text,
-              -- Optionally enable displaying tree structure
-              display = string.format('%s%s:%d', (opts.tree and entry.tree_prefix) or '', entry.text, entry.lnum),
-              filename = entry.filename,
-              lnum = entry.lnum,
-              col = entry.col,
-            }
-          end
-        },
-        previewer = previewers.qflist.new(telescope_opts),
-        sorter = sorters.get_generic_fuzzy_sorter(telescope_opts),
-        attach_mappings = function(prompt_bufnr, map)
-          local run_command = function(bufnr)
-            local selection = actions.get_selected_entry(bufnr)
-            actions.close(prompt_bufnr)
-            vim.call('cursor', selection.lnum, selection.col+1)
-          end
+      prompt_title = 'Outline',
+      sorting_strategy = telescope_opts.sorting_strategy,
+      finder = finders.new_table {
+        results = items,
+        entry_maker = function(entry)
+          return {
+            valid = true,
+            value = entry,
+            ordinal = entry.text,
+            -- Optionally enable displaying tree structure
+            display = string.format('%s%s:%d', (opts.tree and entry.tree_prefix) or '', entry.text, entry.lnum),
+            filename = entry.filename,
+            lnum = entry.lnum,
+            col = entry.col,
+          }
+        end
+      },
+      previewer = previewers.vim_buffer_qflist.new(telescope_opts),
+      sorter = sorters.get_generic_fuzzy_sorter(telescope_opts),
+      attach_mappings = function(prompt_bufnr, map)
+        local run_command = function(bufnr)
+          local selection = actions.get_selected_entry(bufnr)
+          actions.close(prompt_bufnr)
+          vim.call('cursor', selection.lnum, selection.col + 1)
+        end
 
-          map('i', '<C-k>', actions.move_selection_previous)
-          map('i', '<C-j>', actions.move_selection_next)
-          map('n', '<C-k>', actions.move_selection_previous)
-          map('n', '<C-j>', actions.move_selection_next)
-          map('i', '<CR>', run_command)
-          map('n', '<CR>', run_command)
+        map('i', '<C-k>', actions.move_selection_previous)
+        map('i', '<C-j>', actions.move_selection_next)
+        map('n', '<C-k>', actions.move_selection_previous)
+        map('n', '<C-j>', actions.move_selection_next)
+        map('i', '<CR>', run_command)
+        map('n', '<CR>', run_command)
 
-          return true
-        end,
-      }):find()
+        return true
+      end,
+    }):find()
   end)
 end
 
 -- Gets a callback to register to the dartls outline notification.
 M.get_callback = function()
-  return function(_, _, result, _, _)
+  return util.mk_handler(function(_, result, _, _)
     current_outline = result.outline
-  end
+  end)
 end
 
 return M

@@ -12,13 +12,15 @@ nvim_lsp.dartls.setup{
   init_options = {
     closingLabels = true,
   },
-  callbacks = {
-    ['dart/textDocument/publishClosingLabels'] = require('lsp_extensions.dart.closing_labels').get_callback{},
-  },
+  handlers = {
+    ['dart/textDocument/publishClosingLabels'] = require("lsp_extensions.dart.closing_labels").get_callback({ highlight = "Special", prefix = " >> " }),
+  }
 }
 ```
 https://github.com/dart-lang/sdk/blob/master/pkg/analysis_server/tool/lsp_spec/README.md#darttextdocumentpublishclosinglabels-notification
 --]]
+local util = require('lsp_extensions.util')
+
 local M = {}
 
 -- Namespace for the virtual text
@@ -42,7 +44,7 @@ end
 -- Gets a callback to register to the dartls publishClosingLabels notification.
 -- @tparam table a table of options: highlight, prefix
 M.get_callback = function(opts)
-  return function(_, _, result, _, _)
+  return util.mk_handler(function(_, result, _, _, _)
     local uri = result.uri
     local labels = result.labels
     -- This check is meant to prevent stray events from over-writing labels that
@@ -50,7 +52,7 @@ M.get_callback = function(opts)
     if uri == vim.uri_from_bufnr(0) then
       draw_labels(opts, labels)
     end
-  end
+  end)
 end
 
 return M

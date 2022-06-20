@@ -5,7 +5,7 @@ nvim_lsp.dartls.setup{
   init_options = {
     outline = true,
   },
-  callbacks = {
+  handlers = {
     -- get_callback can be called with or without arguments
     ['dart/textDocument/publishOutline'] = require('lsp_extensions.dart.outline').get_callback(),
   },
